@@ -10,7 +10,7 @@ pub trait AsU32 {
     fn as_u32(&self) -> u32;
 }
 
-cfg_if!{
+cfg_if! {
     if #[cfg(windows)] {
         /// Process id.
         pub type Pid = usize;

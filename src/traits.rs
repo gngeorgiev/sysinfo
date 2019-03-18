@@ -1,6 +1,6 @@
-// 
+//
 // Sysinfo
-// 
+//
 // Copyright (c) 2017 Guillaume Gomez
 //
 
@@ -146,7 +146,7 @@ pub trait SystemExt {
 
     /// Returns a list of process containing the given `name`.
     fn get_process_by_name(&self, name: &str) -> Vec<&Process> {
-        let mut ret = vec!();
+        let mut ret = vec![];
         for val in self.get_process_list().values() {
             if val.name().contains(name) {
                 ret.push(val);

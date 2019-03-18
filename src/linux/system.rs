@@ -1,36 +1,34 @@
-// 
+//
 // Sysinfo
-// 
+//
 // Copyright (c) 2015 Guillaume Gomez
 //
 
 use sys::component::{self, Component};
-use sys::processor::*;
-use sys::process::*;
-use sys::Disk;
 use sys::disk;
 use sys::network;
+use sys::process::*;
+use sys::processor::*;
+use sys::Disk;
 use sys::NetworkData;
-use ::{DiskExt, ProcessExt, SystemExt};
 use Pid;
+use {DiskExt, ProcessExt, SystemExt};
 
+use libc::{sysconf, uid_t, _SC_CLK_TCK, _SC_PAGESIZE};
 use std::cell::UnsafeCell;
-use std::fs::{File, read_link};
-use std::io::{self, BufRead, BufReader, Read};
-use std::str::FromStr;
-use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 use std::fs;
-use libc::{uid_t, sysconf, _SC_CLK_TCK, _SC_PAGESIZE};
+use std::fs::{read_link, File};
+use std::io::{self, BufRead, BufReader, Read};
+use std::path::{Path, PathBuf};
+use std::str::FromStr;
 
 use utils::realpath;
-
-use rayon::prelude::*;
 
 macro_rules! to_str {
     ($e:expr) => {
         unsafe { ::std::str::from_utf8_unchecked($e) }
-    }
+    };
 }
 
 /// Structs containing system's information.
@@ -88,29 +86,32 @@ impl System {
                 if first {
                     self.processors.push(new_processor(
                         to_str!(parts.next().unwrap_or(&[])),
-                        parts.next().map(|v| {to_u64(v)}).unwrap_or(0),
-                        parts.next().map(|v| {to_u64(v)}).unwrap_or(0),
-                        parts.next().map(|v| {to_u64(v)}).unwrap_or(0),
-                        parts.next().map(|v| {to_u64(v)}).unwrap_or(0),
-                        parts.next().map(|v| {to_u64(v)}).unwrap_or(0),
-                        parts.next().map(|v| {to_u64(v)}).unwrap_or(0),
-                        parts.next().map(|v| {to_u64(v)}).unwrap_or(0),
-                        parts.next().map(|v| {to_u64(v)}).unwrap_or(0),
-                        parts.next().map(|v| {to_u64(v)}).unwrap_or(0),
-                        parts.next().map(|v| {to_u64(v)}).unwrap_or(0)));
+                        parts.next().map(|v| to_u64(v)).unwrap_or(0),
+                        parts.next().map(|v| to_u64(v)).unwrap_or(0),
+                        parts.next().map(|v| to_u64(v)).unwrap_or(0),
+                        parts.next().map(|v| to_u64(v)).unwrap_or(0),
+                        parts.next().map(|v| to_u64(v)).unwrap_or(0),
+                        parts.next().map(|v| to_u64(v)).unwrap_or(0),
+                        parts.next().map(|v| to_u64(v)).unwrap_or(0),
+                        parts.next().map(|v| to_u64(v)).unwrap_or(0),
+                        parts.next().map(|v| to_u64(v)).unwrap_or(0),
+                        parts.next().map(|v| to_u64(v)).unwrap_or(0),
+                    ));
                 } else {
                     parts.next(); // we don't want the name again
-                    set_processor(&mut self.processors[i],
-                        parts.next().map(|v| {to_u64(v)}).unwrap_or(0),
-                        parts.next().map(|v| {to_u64(v)}).unwrap_or(0),
-                        parts.next().map(|v| {to_u64(v)}).unwrap_or(0),
-                        parts.next().map(|v| {to_u64(v)}).unwrap_or(0),
-                        parts.next().map(|v| {to_u64(v)}).unwrap_or(0),
-                        parts.next().map(|v| {to_u64(v)}).unwrap_or(0),
-                        parts.next().map(|v| {to_u64(v)}).unwrap_or(0),
-                        parts.next().map(|v| {to_u64(v)}).unwrap_or(0),
-                        parts.next().map(|v| {to_u64(v)}).unwrap_or(0),
-                        parts.next().map(|v| {to_u64(v)}).unwrap_or(0));
+                    set_processor(
+                        &mut self.processors[i],
+                        parts.next().map(|v| to_u64(v)).unwrap_or(0),
+                        parts.next().map(|v| to_u64(v)).unwrap_or(0),
+                        parts.next().map(|v| to_u64(v)).unwrap_or(0),
+                        parts.next().map(|v| to_u64(v)).unwrap_or(0),
+                        parts.next().map(|v| to_u64(v)).unwrap_or(0),
+                        parts.next().map(|v| to_u64(v)).unwrap_or(0),
+                        parts.next().map(|v| to_u64(v)).unwrap_or(0),
+                        parts.next().map(|v| to_u64(v)).unwrap_or(0),
+                        parts.next().map(|v| to_u64(v)).unwrap_or(0),
+                        parts.next().map(|v| to_u64(v)).unwrap_or(0),
+                    );
                     i += 1;
                 }
                 if let Some(limit) = limit {
@@ -173,8 +174,12 @@ impl SystemExt for System {
     }
 
     fn refresh_process(&mut self, pid: Pid) -> bool {
-        let found = match _get_process_data(&Path::new("/proc/").join(pid.to_string()),
-                                            &mut self.process_list, self.page_size_kb, 0) {
+        let found = match _get_process_data(
+            &Path::new("/proc/").join(pid.to_string()),
+            &mut self.process_list,
+            self.page_size_kb,
+            0,
+        ) {
             Ok(Some(p)) => {
                 self.process_list.tasks.insert(p.pid(), p);
                 false
@@ -280,8 +285,8 @@ pub fn get_all_data<P: AsRef<Path>>(file_path: P) -> io::Result<String> {
 
     let size = file.read(&mut data)?;
     data.truncate(size);
-    let data = String::from_utf8(data).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput,
-                                                                  e.description()))?;
+    let data = String::from_utf8(data)
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e.description()))?;
     Ok(data)
 }
 
@@ -306,47 +311,55 @@ impl<'a> Wrap<'a> {
 unsafe impl<'a> Send for Wrap<'a> {}
 unsafe impl<'a> Sync for Wrap<'a> {}
 
-fn refresh_procs<P: AsRef<Path>>(proc_list: &mut Process, path: P, page_size_kb: u64,
-                                 pid: Pid) -> bool {
+fn refresh_procs<P: AsRef<Path>>(
+    proc_list: &mut Process,
+    path: P,
+    page_size_kb: u64,
+    pid: Pid,
+) -> bool {
     if let Ok(d) = fs::read_dir(path.as_ref()) {
-        let mut folders = d.filter_map(|entry| {
-            if let Ok(entry) = entry {
-                let entry = entry.path();
+        let mut folders = d
+            .filter_map(|entry| {
+                if let Ok(entry) = entry {
+                    let entry = entry.path();
 
-                if entry.is_dir() {
-                    Some(entry)
+                    if entry.is_dir() {
+                        Some(entry)
+                    } else {
+                        None
+                    }
                 } else {
                     None
                 }
-            } else {
-                None
-            }
-        }).collect::<Vec<_>>();
+            })
+            .collect::<Vec<_>>();
         if pid == 0 {
             let proc_list = Wrap(UnsafeCell::new(proc_list));
-            folders.par_iter()
-                   .filter_map(|e| {
-                       if let Ok(p) = _get_process_data(e.as_path(),
-                                                        proc_list.get(),
-                                                        page_size_kb,
-                                                        pid) {
-                           p
-                       } else {
-                           None
-                       }
-                   })
-                   .collect::<Vec<_>>()
+            folders
+                .filter_map(|e| {
+                    if let Ok(p) =
+                        _get_process_data(e.as_path(), proc_list.get(), page_size_kb, pid)
+                    {
+                        p
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<_>>()
         } else {
-            folders.iter()
-                   .filter_map(|e| {
-                       if let Ok(p) = _get_process_data(e.as_path(), proc_list, page_size_kb, pid) {
-                           p
-                       } else {
-                           None
-                       }
-                   })
-                   .collect::<Vec<_>>()
-        }.into_iter().for_each(|e| {
+            folders
+                .iter()
+                .filter_map(|e| {
+                    if let Ok(p) = _get_process_data(e.as_path(), proc_list, page_size_kb, pid) {
+                        p
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<_>>()
+        }
+        .into_iter()
+        .for_each(|e| {
             proc_list.tasks.insert(e.pid(), e);
         });
         true
@@ -355,17 +368,25 @@ fn refresh_procs<P: AsRef<Path>>(proc_list: &mut Process, path: P, page_size_kb:
     }
 }
 
-fn update_time_and_memory(path: &Path, entry: &mut Process, parts: &[&str], page_size_kb: u64,
-                          parent_memory: u64, pid: Pid) {
+fn update_time_and_memory(
+    path: &Path,
+    entry: &mut Process,
+    parts: &[&str],
+    page_size_kb: u64,
+    parent_memory: u64,
+    pid: Pid,
+) {
     // we get the rss
     {
         entry.memory = u64::from_str(parts[23]).unwrap_or(0) * page_size_kb;
         if entry.memory >= parent_memory {
             entry.memory -= parent_memory;
         }
-        set_time(entry,
-                 u64::from_str(parts[13]).unwrap_or(0),
-                 u64::from_str(parts[14]).unwrap_or(0));
+        set_time(
+            entry,
+            u64::from_str(parts[13]).unwrap_or(0),
+            u64::from_str(parts[14]).unwrap_or(0),
+        );
     }
     refresh_procs(entry, path.join(Path::new("task")), page_size_kb, pid);
 }
@@ -376,11 +397,15 @@ macro_rules! unwrap_or_return {
             Some(x) => x,
             None => return Err(()),
         }
-    }}
+    }};
 }
 
-fn _get_process_data(path: &Path, proc_list: &mut Process, page_size_kb: u64,
-                     pid: Pid) -> Result<Option<Process>, ()> {
+fn _get_process_data(
+    path: &Path,
+    proc_list: &mut Process,
+    page_size_kb: u64,
+    pid: Pid,
+) -> Result<Option<Process>, ()> {
     if let Some(Ok(nb)) = path.file_name().and_then(|x| x.to_str()).map(Pid::from_str) {
         if nb == pid {
             return Err(());
@@ -389,7 +414,6 @@ fn _get_process_data(path: &Path, proc_list: &mut Process, page_size_kb: u64,
 
         tmp.push("stat");
         if let Ok(data) = get_all_data(&tmp) {
-
             // The stat file is "interesting" to parse, because spaces cannot
             // be used as delimiters. The second field stores the command name
             // sourrounded by parentheses. Unfortunately, whitespace and
@@ -423,15 +447,17 @@ fn _get_process_data(path: &Path, proc_list: &mut Process, page_size_kb: u64,
                 }
             };
 
-            let mut p = Process::new(nb,
-                                     parent_pid,
-                                     u64::from_str(parts[21]).unwrap_or(0) /
-                                     unsafe { sysconf(_SC_CLK_TCK) } as u64);
+            let mut p = Process::new(
+                nb,
+                parent_pid,
+                u64::from_str(parts[21]).unwrap_or(0) / unsafe { sysconf(_SC_CLK_TCK) } as u64,
+            );
 
-            p.status = parts[2].chars()
-                               .next()
-                               .and_then(|c| Some(ProcessStatus::from(c)))
-                               .unwrap_or(ProcessStatus::Unknown(0));
+            p.status = parts[2]
+                .chars()
+                .next()
+                .and_then(|c| Some(ProcessStatus::from(c)))
+                .unwrap_or(ProcessStatus::Unknown(0));
 
             tmp = PathBuf::from(path);
             tmp.push("status");
@@ -477,17 +503,19 @@ fn _get_process_data(path: &Path, proc_list: &mut Process, page_size_kb: u64,
                 tmp = PathBuf::from(path);
                 tmp.push("cmdline");
                 p.cmd = copy_from_file(&tmp);
-                p.name = p.cmd.get(0)
-                              .map(|x| x.split('/').last().unwrap_or_else(|| "").to_owned())
-                              .unwrap_or_default();
+                p.name = p
+                    .cmd
+                    .get(0)
+                    .map(|x| x.split('/').last().unwrap_or_else(|| "").to_owned())
+                    .unwrap_or_default();
                 tmp = PathBuf::from(path);
                 tmp.push("environ");
                 p.environ = copy_from_file(&tmp);
                 tmp = PathBuf::from(path);
                 tmp.push("exe");
 
-                p.exe = read_link(tmp.to_str()
-                                     .unwrap_or_else(|| "")).unwrap_or_else(|_| PathBuf::new());
+                p.exe = read_link(tmp.to_str().unwrap_or_else(|| ""))
+                    .unwrap_or_else(|_| PathBuf::new());
 
                 tmp = PathBuf::from(path);
                 tmp.push("cwd");
@@ -525,21 +553,24 @@ fn copy_from_file(entry: &Path) -> Vec<String> {
 
 fn get_all_disks() -> Vec<Disk> {
     let content = get_all_data("/proc/mounts").unwrap_or_default();
-    let disks = content.lines()
-        .filter(|line| {
-            let line = line.trim_start();
-            // While the `sd` prefix is most common, some disks instead use the `nvme` prefix. This
-            // prefix refers to NVM (non-volatile memory) cabale SSDs. These disks run on the NVMe
-            // storage controller protocol (not the scsi protocol) and as a result use a different
-            // prefix to support NVMe namespaces.
-            line.starts_with("/dev/sd") || line.starts_with("/dev/nvme")
-        });
+    let disks = content.lines().filter(|line| {
+        let line = line.trim_start();
+        // While the `sd` prefix is most common, some disks instead use the `nvme` prefix. This
+        // prefix refers to NVM (non-volatile memory) cabale SSDs. These disks run on the NVMe
+        // storage controller protocol (not the scsi protocol) and as a result use a different
+        // prefix to support NVMe namespaces.
+        line.starts_with("/dev/sd") || line.starts_with("/dev/nvme")
+    });
     let mut ret = vec![];
 
     for line in disks {
         let mut split = line.split(' ');
         if let (Some(name), Some(mountpt), Some(fs)) = (split.next(), split.next(), split.next()) {
-            ret.push(disk::new(name[5..].as_ref(), Path::new(mountpt), fs.as_bytes()));
+            ret.push(disk::new(
+                name[5..].as_ref(),
+                Path::new(mountpt),
+                fs.as_bytes(),
+            ));
         }
     }
     ret

@@ -1,6 +1,6 @@
-// 
+//
 // Sysinfo
-// 
+//
 // Copyright (c) 2015 Guillaume Gomez
 //
 
@@ -9,8 +9,8 @@
 
 #[cfg(test)]
 mod tests {
-    use ::{ProcessExt, System, SystemExt};
-    use ::utils;
+    use utils;
+    use {ProcessExt, System, SystemExt};
 
     #[test]
     fn test_refresh_system() {
@@ -32,7 +32,9 @@ mod tests {
     fn test_get_process() {
         let mut sys = System::new();
         sys.refresh_processes();
-        let p = sys.get_process(utils::get_current_pid()).expect("didn't find process");
+        let p = sys
+            .get_process(utils::get_current_pid())
+            .expect("didn't find process");
         assert!(p.memory() > 0);
     }
 
@@ -51,7 +53,9 @@ mod tests {
 
         let mut sys = System::new();
         sys.refresh_processes();
-        let p = sys.get_process(utils::get_current_pid()).expect("didn't find process");
+        let p = sys
+            .get_process(utils::get_current_pid())
+            .expect("didn't find process");
         p.foo(); // If this doesn't compile, it'll simply mean that the Process type
                  // doesn't implement the Send trait.
         p.bar(); // If this doesn't compile, it'll simply mean that the Process type

@@ -44,7 +44,6 @@
 #![crate_name = "sysinfo"]
 #![crate_type = "lib"]
 #![crate_type = "rlib"]
-
 #![deny(missing_docs)]
 //#![deny(warnings)]
 #![allow(unknown_lints)]
@@ -52,7 +51,6 @@
 #[macro_use]
 extern crate cfg_if;
 extern crate libc;
-extern crate rayon;
 
 cfg_if! {
     if #[cfg(target_os = "macos")] {
@@ -68,33 +66,16 @@ cfg_if! {
     }
 }
 
-pub use common::{
-    AsU32,
-    Pid,
-};
-pub use sys::{
-    Component,
-    Disk,
-    DiskType,
-    NetworkData,
-    Process,
-    ProcessStatus,
-    Processor,
-    System,
-};
-pub use traits::{
-    ComponentExt,
-    DiskExt,
-    ProcessExt,
-    ProcessorExt,
-    SystemExt,
-    NetworkExt,
-};
+pub use common::{AsU32, Pid};
+pub use sys::{Component, Disk, DiskType, NetworkData, Process, ProcessStatus, Processor, System};
+pub use traits::{ComponentExt, DiskExt, NetworkExt, ProcessExt, ProcessorExt, SystemExt};
 
-pub use utils::get_current_pid;
 #[cfg(feature = "c-interface")]
 pub use c_interface::*;
+pub use utils::get_current_pid;
 
+#[cfg(feature = "c-interface")]
+mod c_interface;
 mod common;
 mod component;
 mod process;
@@ -102,8 +83,6 @@ mod processor;
 mod system;
 mod traits;
 mod utils;
-#[cfg(feature = "c-interface")]
-mod c_interface;
 
 /// An enum representing signal on UNIX-like systems.
 #[repr(C)]
@@ -186,6 +165,11 @@ mod test {
         let mut s = ::System::new();
 
         s.refresh_all();
-        assert_eq!(s.get_process_list().iter().all(|(_, proc_)| proc_.memory() == 0), false);
+        assert_eq!(
+            s.get_process_list()
+                .iter()
+                .all(|(_, proc_)| proc_.memory() == 0),
+            false
+        );
     }
 }

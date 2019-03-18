@@ -1,19 +1,19 @@
-// 
+//
 // Sysinfo
-// 
+//
 // Copyright (c) 2017 Guillaume Gomez
 //
 
 #[cfg(not(target_os = "windows"))]
-use std::fs;
-#[cfg(not(target_os = "windows"))]
-use std::path::{Path, PathBuf};
+use libc::{c_char, lstat, stat, S_IFLNK, S_IFMT};
 #[cfg(not(target_os = "windows"))]
 use std::ffi::OsStr;
 #[cfg(not(target_os = "windows"))]
+use std::fs;
+#[cfg(not(target_os = "windows"))]
 use std::os::unix::ffi::OsStrExt;
 #[cfg(not(target_os = "windows"))]
-use libc::{c_char, lstat, stat, S_IFLNK, S_IFMT};
+use std::path::{Path, PathBuf};
 use Pid;
 
 #[cfg(not(target_os = "windows"))]
@@ -29,8 +29,7 @@ pub fn realpath(original: &Path) -> PathBuf {
         let mut result_s = result.to_str().unwrap_or("").as_bytes().to_vec();
         result_s.push(0);
         let mut buf: stat = unsafe { ::std::mem::uninitialized() };
-        let res = unsafe { lstat(result_s.as_ptr() as *const c_char,
-                                 &mut buf as *mut stat) };
+        let res = unsafe { lstat(result_s.as_ptr() as *const c_char, &mut buf as *mut stat) };
         if res < 0 || (buf.st_mode & S_IFMT) != S_IFLNK {
             PathBuf::new()
         } else {

@@ -336,6 +336,7 @@ fn refresh_procs<P: AsRef<Path>>(
         if pid == 0 {
             let proc_list = Wrap(UnsafeCell::new(proc_list));
             folders
+                .iter()
                 .filter_map(|e| {
                     if let Ok(p) =
                         _get_process_data(e.as_path(), proc_list.get(), page_size_kb, pid)
